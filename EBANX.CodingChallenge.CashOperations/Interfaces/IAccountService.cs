@@ -1,14 +1,14 @@
-﻿using EBANX.CodingTest.CashOperations.Models;
-using Microsoft.AspNetCore.Mvc;
+﻿using EBANX.CodingChallenge.CashOperations.DTOs;
+using EBANX.CodingTest.CashOperations.Models;
 
 namespace EBANX.CodingTest.CashOperations.Interfaces
 {
     public interface IAccountService
     {
-        IActionResult HandleEvent(AccountEvent accountEvent);
+        ResponseDTO HandleEvent(AccountEvent accountEvent);
 
-        IActionResult GetBalance(int accountId);
+        ResponseDTO GetBalance(int accountId);
 
-        IActionResult Reset();
+        ResponseDTO Reset();
     }
 }

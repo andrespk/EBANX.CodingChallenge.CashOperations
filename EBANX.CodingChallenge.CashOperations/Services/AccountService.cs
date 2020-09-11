@@ -1,8 +1,8 @@
-﻿using EBANX.CodingTest.CashOperations.Enums;
+﻿using EBANX.CodingChallenge.CashOperations.DTOs;
+using EBANX.CodingTest.CashOperations.Enums;
 using EBANX.CodingTest.CashOperations.Interfaces;
 using EBANX.CodingTest.CashOperations.Models;
 using Hanssens.Net;
-using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -20,78 +20,70 @@ namespace EBANX.CodingTest.CashOperations.Services
             _accounts = _localStorage.Exists("accounts") ? _localStorage.Get<IList<Account>>("accounts") : new List<Account>();
         }
 
-        public IActionResult HandleEvent(AccountEvent accountEvent)
+        public ResponseDTO HandleEvent(AccountEvent accountEvent)
         {
-            IActionResult actionResult;
+            var response = new ResponseDTO();
 
-            try
+            switch (getEventType(accountEvent?.Type))
             {
-                switch (getEventType(accountEvent?.Type))
-                {
-                    case EventTypes.Deposit:
-                        var depositAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
-                        if (depositAccount == null)
-                            depositAccount = new Account(accountEvent.Origin, accountEvent.Amount);
-                        else
-                            depositAccount.MakeDeposit(accountEvent.Amount);
-                        updateAccountList(depositAccount);
-                        actionResult = new CreatedAtRouteResult(null, new { origin = depositAccount });
-                        break;
+                case EventTypes.Deposit:
+                    var depositAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
+                    if (depositAccount == null)
+                        depositAccount = new Account(accountEvent.Origin, accountEvent.Amount);
+                    else
+                        depositAccount.MakeDeposit(accountEvent.Amount);
+                    updateAccountList(depositAccount);
+                    response.StatusCode = 201;
+                    response.Data = new { origin = depositAccount };
+                    break;
 
-                    case EventTypes.Withdraw:
-                        var withdrawAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
-                        if (withdrawAccount == null) return new NotFoundResult();
-                        else
-                        {
-                            withdrawAccount.MakeWithdraw(accountEvent.Amount);
-                            updateAccountList(withdrawAccount);
-                            actionResult = new CreatedAtRouteResult(null, new { origin = withdrawAccount });
-                        }
-                        break;
+                case EventTypes.Withdraw:
+                    var withdrawAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
+                    if (withdrawAccount == null) return new ResponseDTO { StatusCode = 404 };
+                    else
+                    {
+                        withdrawAccount.MakeWithdraw(accountEvent.Amount);
+                        updateAccountList(withdrawAccount);
+                        response.StatusCode = 201;
+                        response.Data = new { origin = withdrawAccount };
+                    }
+                    break;
 
-                    case EventTypes.Transfer:
-                        var fromAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
-                        if (fromAccount == null) return new NotFoundResult();
-                        else
-                        {
-                            var toAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Destination);
-                            if (toAccount == null) return new NotFoundResult();
-                            fromAccount.MakeTransfer(accountEvent.Amount, ref toAccount);
-                            updateAccountList(fromAccount);
-                            updateAccountList(toAccount);
-                            actionResult = new CreatedAtRouteResult(null, new { origin = fromAccount, destination = toAccount });
-                        }
-                        break;
+                case EventTypes.Transfer:
+                    var fromAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
+                    if (fromAccount == null) return new ResponseDTO { StatusCode = 404 };
+                    else
+                    {
+                        var toAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Destination);
+                        if (toAccount == null) return new ResponseDTO { StatusCode = 404 };
+                        fromAccount.MakeTransfer(accountEvent.Amount, ref toAccount);
+                        updateAccountList(fromAccount);
+                        updateAccountList(toAccount);
+                        response.StatusCode = 201;
+                        response.Data = new { origin = fromAccount, destination = toAccount };
+                    }
+                    break;
 
-                    default:
-                        return new NotFoundResult();
-                }
-
-                _localStorage.Store("accounts", _accounts);
-                _localStorage.Persist();
-                return actionResult;
+                default:
+                    return new ResponseDTO { StatusCode = 404 };
             }
-            catch (Exception e)
-            {
-                var logFile = System.IO.File.AppendText("app-errors.log");
-                logFile.WriteLine($"Register Date = {DateTime.UtcNow} Error = {(e.InnerException != null ? e.InnerException : e).Message}");
-                logFile.Flush();
-                return new BadRequestResult();
-            }
+            _localStorage.Store("accounts", _accounts);
+            _localStorage.Persist();
+            return response;
         }
 
-        public IActionResult GetBalance(int accountId)
+        public ResponseDTO GetBalance(int accountId)
         {
             var account = _accounts.FirstOrDefault(a => a.Id == accountId);
-            if (account == null) return new NotFoundResult();
-            return new OkObjectResult(account.Balance);
+            if (account == null) return new ResponseDTO { StatusCode = 404 };
+            return new ResponseDTO { StatusCode = 200, Data = account.Balance };
         }
 
-        public IActionResult Reset()
+        public ResponseDTO Reset()
         {
             _localStorage.Store("accounts", new List<Account>());
             _localStorage.Persist();
-            return new OkResult();
+            return new ResponseDTO { StatusCode = 200 };
         }
 
         private void updateAccountList(Account account)
