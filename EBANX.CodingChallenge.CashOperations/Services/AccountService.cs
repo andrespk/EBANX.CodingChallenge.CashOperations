@@ -45,7 +45,7 @@ namespace EBANX.CodingTest.CashOperations.Services
 
                 case EventTypes.Withdraw:
                     var withdrawAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
-                    if (withdrawAccount == null) actionResult = new StatusCodeResult(_notFoundStatus);
+                    if (withdrawAccount == null) return new StatusCodeResult(_notFoundStatus);
                     else
                     {
                         withdrawAccount.MakeWithdraw(accountEvent.Amount);
@@ -55,7 +55,7 @@ namespace EBANX.CodingTest.CashOperations.Services
 
                 case EventTypes.Transfer:
                     var fromAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
-                    if (fromAccount == null) actionResult = new StatusCodeResult(_notFoundStatus);
+                    if (fromAccount == null) return new StatusCodeResult(_notFoundStatus);
                     else
                     {
                         var toAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Destination);
@@ -68,6 +68,10 @@ namespace EBANX.CodingTest.CashOperations.Services
                 default:
                     return new StatusCodeResult(_notFoundStatus);
             }
+
+            _localStorage.Store("accounts", _accounts);
+            _localStorage.Persist();
+            return actionResult;
         }
 
         public IActionResult GetBalance(int accountId)
