@@ -31,15 +31,10 @@ namespace EBANX.CodingTest.CashOperations.Services
                 case EventTypes.Deposit:
                     var depositAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
                     if (depositAccount == null)
-                    {
                         depositAccount = new Account(accountEvent.Origin, accountEvent.Amount);
-                        _accounts.Add(depositAccount);
-                    }
                     else
-                    {
-                        _accounts = _accounts.Where(a => a.Id != depositAccount.Id).ToList();
-                        _accounts.Add(depositAccount);
-                    }
+                        depositAccount.MakeDeposit(accountEvent.Amount);
+                    updateAccountList(depositAccount);
                     actionResult = new CreatedAtRouteResult(null, new { origin = depositAccount });
                     break;
 
@@ -49,6 +44,7 @@ namespace EBANX.CodingTest.CashOperations.Services
                     else
                     {
                         withdrawAccount.MakeWithdraw(accountEvent.Amount);
+                        updateAccountList(withdrawAccount);
                         actionResult = new CreatedAtRouteResult(null, new { origin = withdrawAccount });
                     }
                     break;
@@ -61,6 +57,8 @@ namespace EBANX.CodingTest.CashOperations.Services
                         var toAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Destination);
                         if (toAccount == null) return new StatusCodeResult((int)HttpStatusCode.NotFound);
                         fromAccount.MakeTransfer(accountEvent.Amount, ref toAccount);
+                        updateAccountList(fromAccount);
+                        updateAccountList(toAccount);
                         actionResult = new CreatedAtRouteResult(null, new { origin = fromAccount, destination = toAccount });
                     }
                     break;
@@ -81,24 +79,25 @@ namespace EBANX.CodingTest.CashOperations.Services
             return new OkObjectResult(account.Balance);
         }
 
+        private void updateAccountList(Account account)
+        {
+            _accounts = _accounts.Where(a => a.Id != account.Id).ToList();
+            _accounts.Add(account);
+        }
+
         private EventTypes getEventType(string stringValue)
         {
-            var type = typeof(EventTypes);
-            if (!type.IsEnum) throw new InvalidOperationException();
-            foreach (var field in type.GetFields())
+            if (!typeof(EventTypes).IsEnum) throw new InvalidOperationException();
+            foreach (var field in typeof(EventTypes).GetFields())
             {
                 var attribute = Attribute.GetCustomAttribute(field,
                     typeof(DescriptionAttribute)) as DescriptionAttribute;
                 if (attribute != null)
-                {
-                    if (attribute.Description == stringValue)
+                    if (attribute.Description == stringValue.ToLower())
                         return (EventTypes)field.GetValue(null);
-                }
-                else
-                {
-                    if (field.Name == stringValue)
+                    else
+                    if (field.Name == stringValue.ToLower())
                         return (EventTypes)field.GetValue(null);
-                }
             }
             throw new ArgumentException("The Enum value could not be located.", nameof(stringValue));
         }
