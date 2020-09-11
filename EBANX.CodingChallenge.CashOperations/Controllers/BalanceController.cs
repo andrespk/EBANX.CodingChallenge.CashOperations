@@ -25,4 +25,3 @@ namespace EBANX.CodingTest.CashOperations.Controllers
         => await Task.FromResult(_service.Reset());
     }
 }
-}
