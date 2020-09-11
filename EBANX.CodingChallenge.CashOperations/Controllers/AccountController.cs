@@ -21,7 +21,7 @@ namespace EBANX.CodingTest.CashOperations.Controllers
         public async Task<IActionResult> SetEvent(AccountEvent model)
         {
             var response = await Task.FromResult(_service.HandleEvent(model));
-            return response.Data != null ? StatusCode(response.StatusCode, response.Data) : StatusCode(response.StatusCode, null);
+            return StatusCode(response.StatusCode, response.Data);
         }
 
         [HttpGet]
@@ -29,7 +29,7 @@ namespace EBANX.CodingTest.CashOperations.Controllers
         public async Task<IActionResult> GetBalance(int account_id)
         {
             var response = await Task.FromResult(_service.GetBalance(account_id));
-            return response.Data != null ? StatusCode(response.StatusCode, response.Data) : StatusCode(response.StatusCode, null);
+            return StatusCode(response.StatusCode, response.Data);
         }
 
         [HttpPost]
@@ -37,7 +37,7 @@ namespace EBANX.CodingTest.CashOperations.Controllers
         public async Task<IActionResult> ResetBalance()
         {
             var response = await Task.FromResult(_service.Reset());
-            return StatusCode(response.StatusCode, null);
+            return StatusCode(response.StatusCode, response.Data);
         }
     }
 }
