@@ -8,5 +8,7 @@ namespace EBANX.CodingTest.CashOperations.Interfaces
         IActionResult HandleEvent(AccountEvent accountEvent);
 
         IActionResult GetBalance(int accountId);
+
+        IActionResult Reset();
     }
 }

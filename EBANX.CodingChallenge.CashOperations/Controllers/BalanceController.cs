@@ -18,5 +18,11 @@ namespace EBANX.CodingTest.CashOperations.Controllers
         [HttpGet]
         public async Task<IActionResult> Get([FromQuery] int account_id)
         => await Task.FromResult(_service.GetBalance(account_id));
+
+        [HttpPost]
+        [Route("reset")]
+        public async Task<IActionResult> Reset()
+        => await Task.FromResult(_service.Reset());
     }
+}
 }

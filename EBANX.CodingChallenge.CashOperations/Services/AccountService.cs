@@ -79,6 +79,13 @@ namespace EBANX.CodingTest.CashOperations.Services
             return new OkObjectResult(account.Balance);
         }
 
+        public IActionResult Reset()
+        {
+            _localStorage.Store("accounts", new List<Account>());
+            _localStorage.Persist();
+            return new OkResult();
+        }
+
         private void updateAccountList(Account account)
         {
             _accounts = _accounts.Where(a => a.Id != account.Id).ToList();
