@@ -7,13 +7,11 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Net;
 
 namespace EBANX.CodingTest.CashOperations.Services
 {
     public class AccountService : IAccountService
     {
-        private readonly int _notFoundStatus = (int)HttpStatusCode.NotFound;
         private readonly LocalStorage _localStorage = new LocalStorage();
         protected IList<Account> _accounts;
 
@@ -26,56 +24,66 @@ namespace EBANX.CodingTest.CashOperations.Services
         {
             IActionResult actionResult;
 
-            switch (getEventType(accountEvent?.Type))
+            try
             {
-                case EventTypes.Deposit:
-                    var depositAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
-                    if (depositAccount == null)
-                        depositAccount = new Account(accountEvent.Origin, accountEvent.Amount);
-                    else
-                        depositAccount.MakeDeposit(accountEvent.Amount);
-                    updateAccountList(depositAccount);
-                    actionResult = new CreatedAtRouteResult(null, new { origin = depositAccount });
-                    break;
+                switch (getEventType(accountEvent?.Type))
+                {
+                    case EventTypes.Deposit:
+                        var depositAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
+                        if (depositAccount == null)
+                            depositAccount = new Account(accountEvent.Origin, accountEvent.Amount);
+                        else
+                            depositAccount.MakeDeposit(accountEvent.Amount);
+                        updateAccountList(depositAccount);
+                        actionResult = new CreatedAtRouteResult(null, new { origin = depositAccount });
+                        break;
 
-                case EventTypes.Withdraw:
-                    var withdrawAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
-                    if (withdrawAccount == null) return new StatusCodeResult(_notFoundStatus);
-                    else
-                    {
-                        withdrawAccount.MakeWithdraw(accountEvent.Amount);
-                        updateAccountList(withdrawAccount);
-                        actionResult = new CreatedAtRouteResult(null, new { origin = withdrawAccount });
-                    }
-                    break;
+                    case EventTypes.Withdraw:
+                        var withdrawAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
+                        if (withdrawAccount == null) return new NotFoundResult();
+                        else
+                        {
+                            withdrawAccount.MakeWithdraw(accountEvent.Amount);
+                            updateAccountList(withdrawAccount);
+                            actionResult = new CreatedAtRouteResult(null, new { origin = withdrawAccount });
+                        }
+                        break;
 
-                case EventTypes.Transfer:
-                    var fromAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
-                    if (fromAccount == null) return new StatusCodeResult(_notFoundStatus);
-                    else
-                    {
-                        var toAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Destination);
-                        if (toAccount == null) return new StatusCodeResult((int)HttpStatusCode.NotFound);
-                        fromAccount.MakeTransfer(accountEvent.Amount, ref toAccount);
-                        updateAccountList(fromAccount);
-                        updateAccountList(toAccount);
-                        actionResult = new CreatedAtRouteResult(null, new { origin = fromAccount, destination = toAccount });
-                    }
-                    break;
+                    case EventTypes.Transfer:
+                        var fromAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
+                        if (fromAccount == null) return new NotFoundResult();
+                        else
+                        {
+                            var toAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Destination);
+                            if (toAccount == null) return new NotFoundResult();
+                            fromAccount.MakeTransfer(accountEvent.Amount, ref toAccount);
+                            updateAccountList(fromAccount);
+                            updateAccountList(toAccount);
+                            actionResult = new CreatedAtRouteResult(null, new { origin = fromAccount, destination = toAccount });
+                        }
+                        break;
 
-                default:
-                    return new StatusCodeResult(_notFoundStatus);
+                    default:
+                        return new NotFoundResult();
+                }
+
+                _localStorage.Store("accounts", _accounts);
+                _localStorage.Persist();
+                return actionResult;
             }
-
-            _localStorage.Store("accounts", _accounts);
-            _localStorage.Persist();
-            return actionResult;
+            catch (Exception e)
+            {
+                var logFile = System.IO.File.AppendText("app-errors.log");
+                logFile.WriteLine($"Register Date = {DateTime.UtcNow} Error = {(e.InnerException != null ? e.InnerException : e).Message}");
+                logFile.Flush();
+                return new BadRequestResult();
+            }
         }
 
         public IActionResult GetBalance(int accountId)
         {
             var account = _accounts.FirstOrDefault(a => a.Id == accountId);
-            if (account == null) return new StatusCodeResult(_notFoundStatus);
+            if (account == null) return new NotFoundResult();
             return new OkObjectResult(account.Balance);
         }
 
