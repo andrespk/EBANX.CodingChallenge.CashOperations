@@ -7,8 +7,8 @@ namespace EBANX.CodingTest.CashOperations.Interfaces
     {
         ResponseDTO HandleEvent(AccountEvent accountEvent);
 
-        ResponseDTO GetBalance(int accountId);
+        ResponseDTO GetBalance(string accountId);
 
-        ResponseDTO Reset();
+        void Reset();
     }
 }

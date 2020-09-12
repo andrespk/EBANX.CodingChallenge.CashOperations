@@ -12,12 +12,20 @@ namespace EBANX.CodingTest.CashOperations.Services
 {
     public class AccountService : IAccountService
     {
-        private readonly LocalStorage _localStorage = new LocalStorage();
+        private readonly LocalStorage _localStorage = new LocalStorage(
+            new LocalStorageConfiguration
+            {
+                AutoLoad = true,
+                AutoSave = true,
+                Filename = "tempdata.json"
+            });
+
         protected IList<Account> _accounts;
 
         public AccountService()
         {
-            _accounts = _localStorage.Exists("accounts") ? _localStorage.Get<IList<Account>>("accounts") : new List<Account>();
+            _accounts = _localStorage.Exists("accounts") ?
+                        _localStorage.Get<IList<Account>>("accounts") : new List<Account>();
         }
 
         public ResponseDTO HandleEvent(AccountEvent accountEvent)
@@ -27,19 +35,19 @@ namespace EBANX.CodingTest.CashOperations.Services
             switch (getEventType(accountEvent?.Type))
             {
                 case EventTypes.Deposit:
-                    var depositAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
+                    var depositAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Destination);
                     if (depositAccount == null)
-                        depositAccount = new Account(accountEvent.Origin, accountEvent.Amount);
+                        depositAccount = new Account(accountEvent.Destination, accountEvent.Amount);
                     else
                         depositAccount.MakeDeposit(accountEvent.Amount);
                     updateAccountList(depositAccount);
                     response.StatusCode = 201;
-                    response.Data = new { origin = depositAccount };
+                    response.Data = new { destination = depositAccount };
                     break;
 
                 case EventTypes.Withdraw:
                     var withdrawAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
-                    if (withdrawAccount == null) return new ResponseDTO { StatusCode = 404 };
+                    if (withdrawAccount == null) return new ResponseDTO { StatusCode = 404, Data = 0 };
                     else
                     {
                         withdrawAccount.MakeWithdraw(accountEvent.Amount);
@@ -51,11 +59,11 @@ namespace EBANX.CodingTest.CashOperations.Services
 
                 case EventTypes.Transfer:
                     var fromAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Origin);
-                    if (fromAccount == null) return new ResponseDTO { StatusCode = 404 };
+                    if (fromAccount == null) return new ResponseDTO { StatusCode = 404, Data = 0 };
                     else
                     {
                         var toAccount = _accounts.FirstOrDefault(a => a.Id == accountEvent?.Destination);
-                        if (toAccount == null) return new ResponseDTO { StatusCode = 404 };
+                        if (toAccount == null) toAccount = new Account(accountEvent.Destination);
                         fromAccount.MakeTransfer(accountEvent.Amount, ref toAccount);
                         updateAccountList(fromAccount);
                         updateAccountList(toAccount);
@@ -72,18 +80,17 @@ namespace EBANX.CodingTest.CashOperations.Services
             return response;
         }
 
-        public ResponseDTO GetBalance(int accountId)
+        public ResponseDTO GetBalance(string accountId)
         {
             var account = _accounts.FirstOrDefault(a => a.Id == accountId);
-            if (account == null) return new ResponseDTO { StatusCode = 404 };
+            if (account == null) return new ResponseDTO { StatusCode = 404, Data = 0 };
             return new ResponseDTO { StatusCode = 200, Data = account.Balance };
         }
 
-        public ResponseDTO Reset()
+        public void Reset()
         {
             _localStorage.Store("accounts", new List<Account>());
             _localStorage.Persist();
-            return new ResponseDTO { StatusCode = 200 };
         }
 
         private void updateAccountList(Account account)

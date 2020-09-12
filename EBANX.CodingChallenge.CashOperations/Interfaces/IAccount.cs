@@ -4,7 +4,7 @@ namespace EBANX.CodingTest.CashOperations.Interfaces
 {
     public interface IAccount
     {
-        public int Id { get; }
+        public string Id { get; }
         public double Balance { get; }
 
         void MakeDeposit(double amount);
