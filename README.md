@@ -25,4 +25,4 @@ API ASP.NET Core EBANX
 
 
 3. POST /reset
-	Reset state before starting tests
+	* Reset state before starting tests
