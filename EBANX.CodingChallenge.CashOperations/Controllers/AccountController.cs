@@ -33,10 +33,12 @@ namespace EBANX.CodingTest.CashOperations.Controllers
         }
 
         [HttpPost]
+        [Produces("text/plain")]
         [Route("/reset")]
-        public void ResetBalance()
+        public IActionResult ResetBalance()
         {
             _service.Reset();
+            return Ok("OK");
         }
     }
 }
